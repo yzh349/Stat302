@@ -1,0 +1,205 @@
+---
+title: "L04 Maps"
+subtitle: "Data Visualization (STAT 302)" 
+author: "Yizhe Zhang"
+pagetitle: "L04 Yizhe Zhang"
+
+format:
+  html:
+    toc: true
+    toc-location: left
+    embed-resources: true
+    link-external-newwindow: true
+    code-fold: show
+    fig-dpi: 300
+    
+execute:
+  warning: false
+
+from: markdown+emoji
+reference-location: margin
+citation-location: margin 
+---
+
+
+
+## Github Repo Link
+
+
+
+https://github.com/yzh349/Stat302.git
+
+
+
+## Overview
+
+The goal of this lab is to explore various ways of building maps with `ggplot2`.
+
+Challenges are not mandatory for students to complete. We highly recommend students attempt them though. *We would expect graduate students to attempt the challenges.*
+
+## Datasets
+
+We'll be using the `US_income.rda` dataset which should be placed in the `data/` subdirectory in our **L04** project. You'll also be downloading your own data to build maps.
+
+```{r} 
+#| label: load-packages
+
+# Load package(s)
+library(tidyverse)
+library(sf)
+library(tidycensus)
+library(mapview)
+library(tigris)
+library(geodata)
+library(raster)
+library(janitor)
+library(maps)
+library(viridis)
+library(statebins)
+#resolve conflicted functions
+conflicted::conflict_prefer("select","dplyr")
+conflicted::conflict_prefer("filter","dplyr")
+
+# Load dataset(s)
+load(file = "US_income.rda")
+```
+
+## Exercise 1
+
+### Plot 1
+
+Make a county map of a US state using `geom_polygon()`. Maybe use your home state or a favorite state. Please do NOT use the state in the ggplot2 book example. 
+
+Optional: Consider adding major cities (or your home town).
+
+*Hints:*
+
+-   See section [6.1](https://ggplot2-book.org/maps.html#polygonmaps) in our book.
+-   Void theme
+
+::: {.callout-tip icon="false"}
+## Solution
+
+```{r}
+ny_counties <- map_data("county" , "new york") %>%
+  select(lon = long, lat, group, id = subregion)
+  ggplot(ny_counties, aes(lon, lat, group = group)) +
+  geom_polygon(fill = NA, color = "grey50") +
+  coord_quickmap() +
+  ggtitle("NewYork") +
+  theme_void()
+```
+
+### Plot 2
+
+Now use `geom_sf()` instead. You'll need to download data for this. You can use either the `tigris` ([github page](https://github.com/walkerke/tigris)) or `geodata` packages. Either `tigris`' `counties()` with `cb = TRUE` or `geodata`'s `gadm()` could be useful.
+
+::: {.callout-tip icon="false"}
+## Solution
+
+```{r}
+usa_dat <- gadm(country = "USA" , level = 2, path = tempdir()) %>%
+  st_as_sf()%>%
+  clean_names()
+ny_data <- usa_dat %>%
+  filter(name_1 == "New York")
+ggplot(ny_data) +
+  geom_sf(fill = NA, color = "grey50") +
+  theme_void() + 
+  ggtitle("New York")
+
+```
+
+## Exercise 2
+
+Using the `US_income` dataset, recreate the following graphics as precisely as possible.
+
+```{r}
+#| label: ex-2-data-wrangle
+
+
+# Setting income levels
+US_income <- mutate(
+  US_income,
+  income_bins = cut(
+    ifelse(is.na(median_income), 25000, median_income),
+    breaks = c(0, 40000, 50000, 60000, 70000, 80000),
+    labels = c("< $40k", "$40k to $50k", 
+               "$50k to $60k", "$60k to $70k", "> $70k"),
+    right = FALSE
+  )
+)
+```
+
+### Plot 1
+
+*Hints:*
+
+-   `geom_sf()` --- boundary color is `"grey80"` and size is 0.2
+-   `viridis` package (`discrete = TRUE` in `scale_*` function)
+-   Void theme
+
+::: {.callout-tip icon="false"}
+## Solution
+
+```{r}
+ggplot(US_income, aes(fill = income_bins, geometry = geometry)) + geom_sf(color = "grey80" , size = 0.2) + 
+  theme_void() +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(fill = "median\nincome")
+
+```
+### Plot 2
+
+*Hints:*
+
+-   `statebins::geom_statebins()`
+-   `viridis` package (`discrete = TRUE` in `scale_*` function)
+-   Statebins theme
+
+::: {.callout-tip icon="false"}
+```{r}
+ggplot(US_income, aes(state = name, fill = income_bins)) +
+  geom_statebins() +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_statebins() +
+  labs(fill = "median\nincome")
+
+```
+
+
+## Exercise 3
+
+Pick any city or foreign country to build a map for. You can dress it up or make it as basic as you want. Also welcome to try building a graphic like that depicted at the end of section [6.5](https://ggplot2-book.org/maps.html#rastermaps) --- use a different region though.
+
+::: {.callout-tip icon="false"}
+## Solution
+```{r}
+chn <- gadm(country = "CHN" , level = 1, path = tempdir()) %>%
+  st_as_sf()
+ggplot(chn) +
+  geom_sf(fill = NA, color = "grey50") +
+  theme_void() +
+  ggtitle("Map of China")
+    
+```
+
+## Challenge(s)
+
+::: callout-important
+
+<!-- Graduate students are required to complete this challenge. **It is optional for undergraduate students.** -->
+
+It is optional for everyone, but we highly encourage students to give it a try. Several students in past versions of this course used mapping data like this for their final project. Usually using the `leaflet` or `mapview` packages. This one is done with `mapview`, but as an additional challenge students could try doing this with `leaflet` too.
+
+:::
+
+Using the `tidycensus` package and few others, try to create a map like below using [these directions](https://walkerke.github.io/tidycensus/articles/spatial-data.html). Try using a different geographical area and a different variable from the ACS.
+
+::: {.callout-tip icon="false"}
+## Solution
+
+YOUR SOLUTION HERE
+
+:::
+
